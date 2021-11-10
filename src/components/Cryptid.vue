@@ -4,22 +4,36 @@
     <el-row type="flex">
       <el-col :span="12">
         <el-card shadow="never">
-          <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
-                  @click="handleMouseClick">
-            你的浏览器居然不支持Canvas？！赶快换一个吧！！
-          </canvas>
+          <el-card shadow="never">
+            <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
+                    @click="handleMouseClick">
+              你的浏览器居然不支持Canvas？！赶快换一个吧！！
+            </canvas>
+          </el-card>
           <el-card shadow="never">
             <el-row :gutter="12" type="flex" justify="center" align="middle">
               <el-col :span="4">
-                模式选择：
+                手动修改：
               </el-col>
-              <el-col :span="6">
-                <el-radio-group v-model="mode" @change="handleModeChange">
-                  <el-radio :label="0">普通</el-radio>
-                  <el-radio :label="1">进阶</el-radio>
+              <el-col :span="12">
+                <el-radio-group v-model="mode">
+                  <el-radio :label="0">添加/移除遮蔽</el-radio>
+                  <el-radio :label="1">添加/移除小屋</el-radio>
+                  <el-radio :label="2">添加/移除石柱</el-radio>
                 </el-radio-group>
               </el-col>
-              <el-col :offset="10" :span="4">
+              <el-col :span="4">
+                <el-select v-model="chosenColor" placeholder="请选择" popper-class="colorOptionsContent">
+                  <el-option
+                      v-for="item in colorOption"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                      :style="'background:'+ item.value+'; color: '+ item.font_color +'; width:100%; height:100%;'">
+                  </el-option>
+                </el-select>
+              </el-col>
+              <el-col :span="4">
                 <el-button @click="handleManualConfig">
                   {{ this.manual_config_tip }}
                 </el-button>
@@ -162,6 +176,8 @@ export default {
       },
       randomIndexArray: [0, 1, 2, 3, 4, 5],
       randomBoolArray: [false, false, false, false, false, false],
+      hut_info: [[], [], [], [], [], []],
+      stone_info: [[], [], [], [], [], []],
       clueData: [],
       mode: 0,
       clue_state_list: [],
@@ -170,6 +186,29 @@ export default {
       generatedCode: "",
       manual_config_tip: "展开手动布局",
       manual_config_mode: false,
+      chosenColor: "green",
+      colorOption: [
+        {
+          "label": "green",
+          "font_color": "white",
+          "value": "#009A00"
+        },
+        {
+          "label": "blue",
+          "font_color": "white",
+          "value": "#3232E8"
+        },
+        {
+          "label": "black",
+          "font_color": "white",
+          "value": "#000012"
+        },
+        {
+          "label": "white",
+          "font_color": "black",
+          "value": "#FFFFFF"
+        }
+      ],
       tile_list1: [
         {
           id: 0,
@@ -232,6 +271,19 @@ export default {
         y = ev.offsetY;
       }
       const block_info = this.getNearestBlock(x, y);
+      console.log("block info", block_info)
+      if (this.mode === 0) {
+        console.log("shadow mode")
+      }  else if (this.mode === 1) {
+        console.log("add hut to map");
+        console.log("block info", block_info)
+        console.log("map detail", this.map_detail)
+        this.map_detail[block_info["block_x_idx"]][block_info["block_y_idx"]]["hut"] = true;
+        this.map_detail[block_info["block_x_idx"]][block_info["block_y_idx"]]["hut_color"] = this.chosenColor;
+      } else if (this.mode === 2) {
+        console.log("add stone to map");
+      }
+      console.log("block_info", block_info)
       this.redraw_block(block_info);
     },
     handleCodeInputChange(input) {
@@ -270,9 +322,9 @@ export default {
         return;
       }
 
-      const tile_id = parseInt(e.path[0].childNodes[0].data)-1;
+      const tile_id = parseInt(e.path[0].childNodes[0].data) - 1;
       let tile_location = 0;
-      for (let i=0;i<this.randomIndexArray.length;i++) {
+      for (let i = 0; i < this.randomIndexArray.length; i++) {
         if (this.randomIndexArray[i] === tile_id) {
           tile_location = i;
           break;
@@ -281,7 +333,7 @@ export default {
       this.randomBoolArray[tile_location] = !this.randomBoolArray[tile_location];
       this.$notify({
         title: '成功',
-        message: '已成功旋转板块'+(tile_id+1).toString(),
+        message: '已成功旋转板块' + (tile_id + 1).toString(),
         duration: 1000
       });
       this.generateMap({
@@ -317,7 +369,7 @@ export default {
       }
 
       let indexArray = []
-      for (let i=0;i<3;i++) {
+      for (let i = 0; i < 3; i++) {
         indexArray.push(this.tile_list1[i].id);
         indexArray.push(this.tile_list2[i].id);
       }
@@ -329,18 +381,12 @@ export default {
       })
     },
     initClue() {
-      if (this.mode === 1) {
-        this.clueData = CLUE_DATA.map((item) => {
-          return {"clue": item.name};
-        })
-      } else {
-        this.clueData = [];
-        for (const item of CLUE_DATA) {
-          if (item.inverse === false) {
-            this.clueData.push({
-              "clue": item.name
-            })
-          }
+      this.clueData = [];
+      for (const item of CLUE_DATA) {
+        if (item.inverse === false) {
+          this.clueData.push({
+            "clue": item.name
+          })
         }
       }
       const len = this.clueData.length;
@@ -384,9 +430,6 @@ export default {
       }
       this.$set(this.clue_state_list, index, this.clue_state_list[index])
     },
-    handleModeChange() {
-      this.initClue();
-    },
     generateMap(generation_info) {
       // generate
       const gen_str = JSON.stringify(generation_info);
@@ -408,7 +451,7 @@ export default {
             "tile": MAP[tile_id],
             "bear": BEAR[tile_id],
             "cougar": COUGAR[tile_id],
-            "flip": this.randomBoolArray[i * 2 + j]
+            "flip": this.randomBoolArray[i * 2 + j],
           }
           // console.log("map:", tile_id);
           // console.log(MAP[tile_id]);
@@ -457,7 +500,8 @@ export default {
         let y = start_y + (i % 2 === 0 ? 0 : this.r * Math.sin(this.a));
         for (let j = 0; j < this.tile_height; j++) {
           const block_id = i * this.tile_height + j;
-          const block_info = {
+          let block_info = {
+            "tile_id": map_info["tile_id"],
             "block_id": block_id,
             "block_center_x": x,
             "block_center_y": y,
@@ -467,6 +511,23 @@ export default {
             "bear": !map_info.flip ? map_info["bear"][block_id] === 1 : map_info["bear"][17 - block_id],
             "cougar": !map_info.flip ? map_info["cougar"][block_id] === 1 : map_info["cougar"][17 - block_id],
             "shadow": false
+          }
+
+          const block_append_info = {
+            "hut": false,
+            "hut_color": "black",
+            "stone": false,
+            "stone_color": "black",
+          }
+
+          if (Object.prototype.hasOwnProperty.call(this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]], 'hut') || this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] === undefined) {
+            for (let key in block_append_info) {
+              block_info[key] = block_append_info[key];
+            }
+          } else {
+            for (let key in block_append_info) {
+              block_info[key] = this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]][key];
+            }
           }
 
           this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]] = block_info;
@@ -496,6 +557,10 @@ export default {
         this.createAnimalRegion(x, y, "black");
       } else if (block_info["cougar"]) {
         this.createAnimalRegion(x, y, "red");
+      } else if (block_info["hut"]) {
+        this.createStructure(x, y, "hut", block_info["hut_color"]);
+      } else if (block_info["stone"]) {
+        this.createStructure(x, y, "stone", block_info["stone_color"]);
       }
     },
     getPolygonPoints(centerX, centerY, radius, sides, startAngle) {
@@ -522,9 +587,26 @@ export default {
       this.ctx.closePath();
     },
     createAnimalRegion(centerX, centerY, color) {
-      this.createPolygonPath(centerX, centerY, this.r - 5, 6, Math.PI / 6);
+      this.createPolygonPath(centerX, centerY, this.r * 0.8, 6, Math.PI / 6);
       this.ctx.setLineDash([7, 5]);
       this.ctx.strokeStyle = color;
+      this.ctx.stroke();
+    },
+    createStructure(centerX, centerY, type, color) {
+      let edges = 4;
+      let start_angle = 0;
+      if (type === "hut") {
+        edges = 8;
+        start_angle = Math.PI / 8;
+      } else if (type === "stone") {
+        edges = 3;
+        start_angle = 0;
+      }
+      this.createPolygonPath(centerX, centerY, this.r / 2, edges, start_angle);
+      this.ctx.setLineDash([]);
+      this.ctx.strokeStyle = color;
+      this.ctx.fillStyle = color;
+      this.ctx.fill();
       this.ctx.stroke();
     },
     getNearestBlock(x, y) {
@@ -542,6 +624,7 @@ export default {
       return result_block;
     },
     redraw_block(block_info) {
+      // console.log("map detail", this.map_detail)
       const center_x = block_info.block_center_x;
       const center_y = block_info.block_center_y;
       const block_idx_x = block_info.block_x_idx;
@@ -561,6 +644,10 @@ export default {
           this.createAnimalRegion(center_x, center_y, "black");
         } else if (block_info.cougar) {
           this.createAnimalRegion(center_x, center_y, "red");
+        } else if (block_info.hut) {
+          this.createStructure(center_x, center_y, "hut", block_info.hut_color);
+        } else if (block_info.stone) {
+          this.createStructure(center_x, center_y, "stone", block_info.stone_color);
         }
         this.map_detail[block_idx_y][block_idx_x].shadow = true;
       }
@@ -570,6 +657,11 @@ export default {
 </script>
 
 <style scoped>
+
+
+.colorOptionsContent /deep/ .el-select-dropdown*{
+  height:50px;
+}
 
 .checklist_button {
   width: 60%;

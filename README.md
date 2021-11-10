@@ -1,24 +1,24 @@
-# cryptid_vue
+# 诡影寻踪网页小助手
 
-## Project setup
-```
-npm install
-```
+本项目纯属娱乐，一天多撸完，个人自用，代码质量不做保证
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+在线demo地址：[Github demo](https://blog.ygowill.net/assets/vue_proj/cryptid/index.html)
 
-### Compiles and minifies for production
-```
-npm run build
-```
+## 特性描述
 
-### Lints and fixes files
-```
-npm run lint
-```
+1. 全自动生成地图和代码
+2. 手动编辑地图排布和旋转
+3. 线索checklist帮助记忆
+4. 地图可点击进行遮蔽和显示，减少思考量
+5. 下方的神秘代码可以进行复制粘贴以帮助每个玩家得到一样的地图，节约手动排布时间
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+
+
+## 后续计划
+
+| Feature                                                      | Status |
+| ------------------------------------------------------------ | ------ |
+| 添加小屋和石柱的手动编辑                                     | Doing  |
+| 根据线索自动遮蔽不可能区域                                   | TBD    |
+| 添加地图和线索自动生成，摆脱play cryptid网站依赖             | TBD    |
+| 根据每个玩家的已有线索制作独立的地图展示，并自动计算可能的线索 | TBD    |
