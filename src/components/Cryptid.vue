@@ -6,7 +6,7 @@
         <el-card shadow="never">
           <el-card shadow="never">
             <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
-                    @click="handleMouseClick">
+                    @click="handleMapClick">
               你的浏览器居然不支持Canvas？！赶快换一个吧！！
             </canvas>
           </el-card>
@@ -261,30 +261,29 @@ export default {
       this.generateMap(generation_info);
       // console.log(this.map_detail);
     },
-    handleMouseClick(ev) {
+    handleMapClick(ev) {
       let x, y;
-      if (ev.layerX || ev.layerX === 0) {
-        x = ev.layerX;
-        y = ev.layerY;
-      } else if (ev.offsetX || ev.offsetX === 0) { // Opera
+      if (ev.offsetX || ev.offsetX === 0) {
         x = ev.offsetX;
         y = ev.offsetY;
       }
       const block_info = this.getNearestBlock(x, y);
-      console.log("block info", block_info)
+      let type = "shadow";
       if (this.mode === 0) {
         console.log("shadow mode")
       }  else if (this.mode === 1) {
+        type = "structure";
         console.log("add hut to map");
-        console.log("block info", block_info)
-        console.log("map detail", this.map_detail)
-        this.map_detail[block_info["block_x_idx"]][block_info["block_y_idx"]]["hut"] = true;
-        this.map_detail[block_info["block_x_idx"]][block_info["block_y_idx"]]["hut_color"] = this.chosenColor;
+        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"];
+        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut_color"] = this.chosenColor;
       } else if (this.mode === 2) {
+        type = "structure";
         console.log("add stone to map");
+        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"];
+        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone_color"] = this.chosenColor;
       }
       console.log("block_info", block_info)
-      this.redraw_block(block_info);
+      this.redraw_block(block_info, type);
     },
     handleCodeInputChange(input) {
       let complete_code = "N4IglgdgJgpgHgfQIYCcVIJ4gFwG0" + input + "A";
@@ -309,6 +308,11 @@ export default {
           "flip_array": [false, false, false, false, false, false]
         }
         this.generateMap(generation_info);
+      } else {
+        this.generateMap({
+          "index_array": this.randomIndexArray,
+          "flip_array": this.randomBoolArray,
+        })
       }
     },
     handleDragClick(e) {
@@ -323,19 +327,15 @@ export default {
       }
 
       const tile_id = parseInt(e.path[0].childNodes[0].data) - 1;
-      let tile_location = 0;
-      for (let i = 0; i < this.randomIndexArray.length; i++) {
-        if (this.randomIndexArray[i] === tile_id) {
-          tile_location = i;
-          break;
-        }
-      }
-      this.randomBoolArray[tile_location] = !this.randomBoolArray[tile_location];
+      this.randomBoolArray[tile_id] = !this.randomBoolArray[tile_id];
       this.$notify({
         title: '成功',
         message: '已成功旋转板块' + (tile_id + 1).toString(),
         duration: 1000
       });
+      MAP[tile_id].reverse();
+      BEAR[tile_id].reverse();
+      COUGAR[tile_id].reverse();
       this.generateMap({
         "index_array": this.randomIndexArray,
         "flip_array": this.randomBoolArray
@@ -430,6 +430,22 @@ export default {
       }
       this.$set(this.clue_state_list, index, this.clue_state_list[index])
     },
+    drawDigits() {
+      let canvas = document.getElementById('canvas');
+      let number_start_y = canvas.height / 6;
+      for (let i = 0; i < 3; i++) {
+        let number_start_x = canvas.width / 4;
+        for (let j = 0; j < 2; j++) {
+          const current_number = i * 2 + j;
+          this.ctx.font = "60px Arial";
+          this.ctx.textAlign = "center";
+          this.ctx.fillStyle = "black";
+          this.ctx.fillText((this.randomIndexArray[current_number] + 1).toString(), number_start_x, number_start_y);
+          number_start_x += canvas.width / 2;
+        }
+        number_start_y += canvas.height / 3
+      }
+    },
     generateMap(generation_info) {
       // generate
       const gen_str = JSON.stringify(generation_info);
@@ -461,22 +477,7 @@ export default {
         start_y += 6 * this.r * Math.sin(this.a) + 0.4 * this.r;
       }
       if (this.manual_config_mode) {
-        // console.log("manual config mode on!")
-        // console.log(this.randomIndexArray)
-        let canvas = document.getElementById('canvas');
-        let number_start_y = canvas.height / 6;
-        for (let i = 0; i < 3; i++) {
-          let number_start_x = canvas.width / 4;
-          for (let j = 0; j < 2; j++) {
-            const current_number = i * 2 + j;
-            this.ctx.font = "60px Arial";
-            this.ctx.textAlign = "center";
-            this.ctx.fillStyle = "black";
-            this.ctx.fillText((this.randomIndexArray[current_number] + 1).toString(), number_start_x, number_start_y);
-            number_start_x += canvas.width / 2;
-          }
-          number_start_y += canvas.height / 3
-        }
+        this.drawDigits();
       }
     },
     generateRandomBoolArray(length) {
@@ -505,12 +506,18 @@ export default {
             "block_id": block_id,
             "block_center_x": x,
             "block_center_y": y,
-            "block_x_idx": !map_info.flip ? map_info["tile_start_x"] * 6 + i : 11 - (map_info["tile_start_x"] * 6 + i),
-            "block_y_idx": !map_info.flip ? map_info["tile_start_y"] * 3 + j : 8 - (map_info["tile_start_y"] * 3 + j),
-            "block": !map_info.flip ? map_info["tile"][block_id] : map_info["tile"][17 - block_id],
-            "bear": !map_info.flip ? map_info["bear"][block_id] === 1 : map_info["bear"][17 - block_id],
-            "cougar": !map_info.flip ? map_info["cougar"][block_id] === 1 : map_info["cougar"][17 - block_id],
-            "shadow": false
+            // "block_x_idx": !map_info.flip ? map_info["tile_start_x"] * 6 + i : 11 - (map_info["tile_start_x"] * 6 + i),
+            // "block_y_idx": !map_info.flip ? map_info["tile_start_y"] * 3 + j : 8 - (map_info["tile_start_y"] * 3 + j),
+            // "block": !map_info.flip ? map_info["tile"][block_id] : map_info["tile"][17 - block_id],
+            // "bear": !map_info.flip ? map_info["bear"][block_id] === 1 : map_info["bear"][17 - block_id],
+            // "cougar": !map_info.flip ? map_info["cougar"][block_id] === 1 : map_info["cougar"][17 - block_id],
+            "block_x_idx": map_info["tile_start_x"] * 6 + i,
+            "block_y_idx": map_info["tile_start_y"] * 3 + j,
+            "block": map_info["tile"][block_id],
+            "bear": map_info["bear"][block_id],
+            "cougar": map_info["cougar"][block_id],
+            "shadow": false,
+            "flip": map_info["flip"]
           }
 
           const block_append_info = {
@@ -600,11 +607,12 @@ export default {
         start_angle = Math.PI / 8;
       } else if (type === "stone") {
         edges = 3;
-        start_angle = 0;
+        start_angle = Math.PI / 3;
       }
       this.createPolygonPath(centerX, centerY, this.r / 2, edges, start_angle);
       this.ctx.setLineDash([]);
-      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = "black";
       this.ctx.fillStyle = color;
       this.ctx.fill();
       this.ctx.stroke();
@@ -623,34 +631,51 @@ export default {
       }
       return result_block;
     },
-    redraw_block(block_info) {
+    redraw_block(block_info, type) {
       // console.log("map detail", this.map_detail)
       const center_x = block_info.block_center_x;
       const center_y = block_info.block_center_y;
       const block_idx_x = block_info.block_x_idx;
       const block_idx_y = block_info.block_y_idx;
-      if (block_info.shadow) {
-        this.drawHexagon(center_x, center_y, block_info);
-        this.map_detail[block_idx_y][block_idx_x].shadow = false;
+      console.log("redraw block type", type)
+      if (type === "shadow") {
+        if (block_info.shadow) {
+          console.log("redraw block info",block_info)
+          this.drawHexagon(center_x, center_y, block_info);
+        } else {
+          this.createPolygonPath(center_x, center_y, this.r, 6, Math.PI / 6);
+          this.ctx.setLineDash([])
+          this.ctx.lineWidth = 2;
+          this.ctx.strokeStyle = "white"
+          this.ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+          this.ctx.fill();
+          this.ctx.stroke();
+          if (block_info.bear) {
+            this.createAnimalRegion(center_x, center_y, "black");
+          } else if (block_info.cougar) {
+            this.createAnimalRegion(center_x, center_y, "red");
+          }
+          if (block_info.hut) {
+            this.createStructure(center_x, center_y, "hut", block_info.hut_color);
+          } else if (block_info.stone) {
+            this.createStructure(center_x, center_y, "stone", block_info.stone_color);
+          }
+        }
+        this.map_detail[block_idx_y][block_idx_x].shadow = !this.map_detail[block_idx_y][block_idx_x].shadow;
       } else {
-        this.createPolygonPath(center_x, center_y, this.r, 6, Math.PI / 6);
-        this.ctx.setLineDash([])
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = "white"
-        this.ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-        this.ctx.fill();
-        this.ctx.stroke();
-        if (block_info.bear) {
-          this.createAnimalRegion(center_x, center_y, "black");
-        } else if (block_info.cougar) {
-          this.createAnimalRegion(center_x, center_y, "red");
-        } else if (block_info.hut) {
+        this.drawHexagon(center_x, center_y, block_info);
+        if (block_info.hut) {
           this.createStructure(center_x, center_y, "hut", block_info.hut_color);
         } else if (block_info.stone) {
           this.createStructure(center_x, center_y, "stone", block_info.stone_color);
         }
-        this.map_detail[block_idx_y][block_idx_x].shadow = true;
       }
+
+
+      if (this.manual_config_mode){
+        this.drawDigits();
+      }
+
     },
   },
 }
