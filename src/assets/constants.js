@@ -217,3 +217,10 @@ export const DIRECTION_ODD = [
     [1, 0],
     [0, -1]
 ]
+
+export const COLOR_SHORT_MAP = {
+    "#FFFFFF": "W",
+    "#000012": "D",
+    "#009A00": "G",
+    "#3232E8":  "B"
+}

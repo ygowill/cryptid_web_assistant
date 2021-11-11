@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>诡影寻踪 网页助手</h2>
+    <h2>诡影寻踪 网页助手 v1.0</h2>
     <el-row type="flex">
       <el-col :span="12">
         <el-card shadow="never">
@@ -147,7 +147,7 @@
 </template>
 
 <script>
-import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP, DIRECTION_EVEN, DIRECTION_ODD} from "@/assets/constants"
+import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP, DIRECTION_EVEN, DIRECTION_ODD, COLOR_SHORT_MAP} from "@/assets/constants"
 import draggable from 'vuedraggable'
 
 const LZ = require("lz-string")
@@ -184,7 +184,7 @@ export default {
       generatedCode: "",
       manual_config_tip: "展开手动布局",
       manual_config_mode: false,
-      chosenColor: "green",
+      chosenColor: "#009A00",
       colorOption: [
         {
           "label": "green",
@@ -238,6 +238,7 @@ export default {
       ownClue: null,
       hut_info: [],
       stone_info: [],
+      showPosition: false
     };
   },
   methods: {
@@ -478,6 +479,13 @@ export default {
         number_start_y += canvas.height / 3
       }
     },
+    drawBlockInfo(block_info) {
+      this.ctx.font = "15px Arial";
+      this.ctx.textAlign = "center";
+      this.ctx.fillStyle = "white";
+      const text = block_info["block_x_idx"].toString() + "," + block_info["block_y_idx"];
+      this.ctx.fillText(text, block_info["block_center_x"], block_info["block_center_y"] + this.r/4);
+    },
     generateMap(generation_info) {
       // generate code
       const gen_str = JSON.stringify(generation_info);
@@ -597,6 +605,9 @@ export default {
       // console.log("draw hexagon", block_info);
       this.drawAnimal(block_info);
       this.drawStructure(block_info);
+      if (this.showPosition){
+        this.drawBlockInfo(block_info);
+      }
     },
     getPolygonPoints(centerX, centerY, radius, sides, startAngle) {
       let points = [],
@@ -630,10 +641,10 @@ export default {
     createStructureRegion(centerX, centerY, type, color) {
       let edges = 4;
       let start_angle = 0;
-      if (type === "hut") {
+      if (type === "stone") {
         edges = 8;
         start_angle = Math.PI / 8;
-      } else if (type === "stone") {
+      } else if (type === "hut") {
         edges = 3;
         start_angle = Math.PI / 3;
       }
@@ -681,10 +692,14 @@ export default {
         if (block_info.shadow) {
           this.drawShadow(center_x, center_y);
         }
+        this.drawAnimal(block_info);
         this.drawStructure(block_info);
       }
       if (this.manual_config_mode){
         this.drawDigits();
+      }
+      if (this.showPosition){
+        this.drawBlockInfo(block_info);
       }
     },
     drawShadow(center_x, center_y) {
@@ -726,28 +741,58 @@ export default {
         visited[i] = [];
         for (let j=0;j<this.map_detail[0].length;j++) {
           visited[i][j] = false;
-          if (this.map_detail[i][j].block === this.ownClue.value1 ||
-              (this.ownClue.value2 !== null && this.map_detail[i][j].block === this.ownClue.value2)) {
+          let test_flag = false;
+          if (this.ownClue.type === "terrain") {
+            if (this.map_detail[i][j].block === this.ownClue.value1 ||
+                (this.ownClue.value2 !== null && this.map_detail[i][j].block === this.ownClue.value2)) {
+              test_flag = true;
+            }
+          } else if (this.ownClue.type === "animal") {
+            if (this.ownClue.value2 === null) {
+              if ((this.ownClue.value1 === 'C' && this.map_detail[i][j].cougar) || (this.ownClue.value1 === 'B' && this.map_detail[i][j].bear)) {
+                test_flag = true;
+              }
+            } else {
+              if (this.map_detail[i][j].bear || this.map_detail[i][j].cougar) {
+                test_flag = true;
+              }
+            }
+          } else if (this.ownClue.type === "structType") {
+            if ((this.ownClue.value1==='O' && this.map_detail[i][j].stone) || (this.ownClue.value1==='T' && this.map_detail[i][j].hut)) {
+              test_flag = true;
+            }
+          } else if (this.ownClue.type === "structColor") {
+            if (this.map_detail[i][j].hut) {
+              test_flag = (COLOR_SHORT_MAP[this.map_detail[i][j].hut_color] === this.ownClue.value1);
+            }
+            if (this.map_detail[i][j].stone) {
+              test_flag = (COLOR_SHORT_MAP[this.map_detail[i][j].stone_color] === this.ownClue.value1);
+            }
+          }
+          if (test_flag) {
             block_list.push(this.map_detail[i][j]);
             visited[i][j] = true;
+            this.map_detail[i][j].shadow = true;
+          } else {
             this.map_detail[i][j].shadow = false;
-            this.redraw_block(this.map_detail[i][j], "shadow");
           }
+          this.redraw_block(this.map_detail[i][j], "shadow");
         }
       }
+
 
       // multiple times expand shadow area due to the distance
       let times = 0;
       while(times < this.ownClue.distance) {
-        console.log("expand times: ", times);
+        // console.log("expand times: ", times);
         times += 1;
         let block_list2 = [];
         while (block_list.length !== 0) {
           const first_block = block_list[0];
           block_list.splice(0, 1);
 
-          console.log("first block", first_block)
-          console.log("block list", block_list)
+          // console.log("first block", first_block)
+          // console.log("block list", block_list)
 
           const block_i = first_block.block_y_idx;
           const block_j = first_block.block_x_idx;
@@ -765,14 +810,13 @@ export default {
                 !visited[final_i][final_j]) {
               visited[final_i][final_j] = true;
               block_list2.push(this.map_detail[final_i][final_j]);
-              this.map_detail[final_i][final_j].shadow = false;
+              this.map_detail[final_i][final_j].shadow = true;
               this.redraw_block(this.map_detail[final_i][final_j], "shadow");
             }
           }
-
-          // layer by layer expand
-          block_list = block_list2;
         }
+        // layer by layer expand
+        block_list = block_list2;
       }
     },
     regenerateMap() {
