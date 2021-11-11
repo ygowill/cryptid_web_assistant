@@ -147,7 +147,7 @@
 </template>
 
 <script>
-import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP} from "@/assets/constants"
+import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP, DIRECTION_EVEN, DIRECTION_ODD} from "@/assets/constants"
 import draggable from 'vuedraggable'
 
 const LZ = require("lz-string")
@@ -176,8 +176,6 @@ export default {
       },
       randomIndexArray: [0, 1, 2, 3, 4, 5],
       randomBoolArray: [false, false, false, false, false, false],
-      hut_info: [[], [], [], [], [], []],
-      stone_info: [[], [], [], [], [], []],
       clueData: [],
       mode: 0,
       clue_state_list: [],
@@ -238,6 +236,8 @@ export default {
         },
       ],
       ownClue: null,
+      hut_info: [],
+      stone_info: [],
     };
   },
   methods: {
@@ -252,15 +252,9 @@ export default {
         }
       }
 
-      const randomIndexArray = this.generateRandomIndexArray(6);
-      const randomBoolArray = this.generateRandomBoolArray(6);
-      const generation_info = {
-        "index_array": randomIndexArray,
-        "flip_array": randomBoolArray
-      }
-
-      this.generateMap(generation_info);
-      // console.log(this.map_detail);
+      this.randomIndexArray = this.generateRandomIndexArray(6);
+      this.randomBoolArray = this.generateRandomBoolArray(6);
+      this.regenerateMap();
     },
     handleMapClick(ev) {
       let x, y;
@@ -275,13 +269,43 @@ export default {
       }  else if (this.mode === 1) {
         type = "structure";
         // console.log("add hut to map");
-        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"];
-        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut_color"] = this.chosenColor;
+        if (this.checkHutExist(block_info["block_x_idx"], block_info["block_y_idx"]) < 0) {
+          // console.log("add hut to map");
+          this.addToHut(block_info["block_x_idx"], block_info["block_y_idx"], this.chosenColor);
+        } else {
+          // console.log("remove hut from map");
+          this.removeFromHut(block_info["block_x_idx"], block_info["block_y_idx"]);
+        }
+        // console.log("hut info", this.hut_info)
       } else if (this.mode === 2) {
         type = "structure";
         // console.log("add stone to map");
-        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"];
-        this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone_color"] = this.chosenColor;
+        if (this.checkStoneExist(block_info["block_x_idx"], block_info["block_y_idx"]) < 0) {
+          // console.log("add stone to map");
+          this.addToStone(block_info["block_x_idx"], block_info["block_y_idx"], this.chosenColor);
+        } else {
+          // console.log("remove stone from map");
+          this.removeFromStone(block_info["block_x_idx"], block_info["block_y_idx"]);
+        }
+        // console.log("stone info", this.stone_info)
+      }
+
+      const hut_info_id = this.checkHutExist(block_info["block_x_idx"], block_info["block_y_idx"]);
+      // console.log("hut exist:", hut_info_id)
+      if (hut_info_id >= 0) {
+        block_info["hut"] = true;
+        block_info["hut_color"] = this.hut_info[hut_info_id]["color"];
+      } else {
+        block_info["hut"] = false;
+      }
+
+      const stone_info_id = this.checkStoneExist(block_info["block_x_idx"], block_info["block_y_idx"]);
+      // console.log("stone exist:", stone_info_id)
+      if (stone_info_id >= 0) {
+        block_info["stone"] = true;
+        block_info["stone_color"] = this.stone_info[stone_info_id]["color"];
+      } else {
+        block_info["stone"] = false;
       }
       // console.log("block_info", block_info)
       this.redraw_block(block_info, type);
@@ -310,10 +334,7 @@ export default {
         }
         this.generateMap(generation_info);
       } else {
-        this.generateMap({
-          "index_array": this.randomIndexArray,
-          "flip_array": this.randomBoolArray,
-        })
+        this.regenerateMap();
       }
     },
     handleDragClick(e) {
@@ -337,10 +358,7 @@ export default {
       MAP[tile_id].reverse();
       BEAR[tile_id].reverse();
       COUGAR[tile_id].reverse();
-      this.generateMap({
-        "index_array": this.randomIndexArray,
-        "flip_array": this.randomBoolArray
-      })
+      this.regenerateMap();
     },
     handleDragEnd(e) {
       let old_row = e.oldIndex;
@@ -376,10 +394,7 @@ export default {
       }
       // console.log("index array", indexArray);
       this.randomIndexArray = indexArray;
-      this.generateMap({
-        "index_array": this.randomIndexArray,
-        "flip_array": this.randomBoolArray
-      })
+      this.regenerateMap();
     },
     initClue() {
       this.clueData = [];
@@ -529,10 +544,7 @@ export default {
             "bear": map_info["bear"][block_id],
             "cougar": map_info["cougar"][block_id],
             "shadow": false,
-            "flip": map_info["flip"]
-          }
-
-          const block_append_info = {
+            "flip": map_info["flip"],
             "hut": false,
             "hut_color": "black",
             "stone": false,
@@ -547,18 +559,20 @@ export default {
             block_info["block_type"].push("structure")
           }
 
-          if (Object.prototype.hasOwnProperty.call(this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]], 'hut') || this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] === undefined) {
-            for (let key in block_append_info) {
-              block_info[key] = block_append_info[key];
-            }
-          } else {
-            for (let key in block_append_info) {
-              block_info[key] = this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]][key];
-            }
+          const hut_info_id = this.checkHutExist(block_info["block_x_idx"], block_info["block_y_idx"]);
+          if (hut_info_id >= 0) {
+            block_info["hut"] = true;
+            block_info["hut_color"] = this.hut_info[hut_info_id]["color"];
+          }
+
+          const stone_info_id = this.checkStoneExist(block_info["block_x_idx"], block_info["block_y_idx"]);
+          if (stone_info_id >= 0) {
+            block_info["stone"] = true;
+            block_info["stone_color"] = this.stone_info[stone_info_id]["color"];
           }
 
           this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]] = block_info;
-          // console.log(x, y, block_info["block"]);
+          // console.log(x, y, block_info);
           this.drawHexagon(x, y, block_info);
           y += 2 * this.r * Math.sin(this.a);
         }
@@ -580,15 +594,9 @@ export default {
       this.ctx.fill();
       this.ctx.stroke();
 
-      if (block_info["bear"]) {
-        this.createAnimalRegion(x, y, "black");
-      } else if (block_info["cougar"]) {
-        this.createAnimalRegion(x, y, "red");
-      } else if (block_info["hut"]) {
-        this.createStructure(x, y, "hut", block_info["hut_color"]);
-      } else if (block_info["stone"]) {
-        this.createStructure(x, y, "stone", block_info["stone_color"]);
-      }
+      // console.log("draw hexagon", block_info);
+      this.drawAnimal(block_info);
+      this.drawStructure(block_info);
     },
     getPolygonPoints(centerX, centerY, radius, sides, startAngle) {
       let points = [],
@@ -619,7 +627,7 @@ export default {
       this.ctx.strokeStyle = color;
       this.ctx.stroke();
     },
-    createStructure(centerX, centerY, type, color) {
+    createStructureRegion(centerX, centerY, type, color) {
       let edges = 4;
       let start_angle = 0;
       if (type === "hut") {
@@ -664,28 +672,16 @@ export default {
           this.drawHexagon(center_x, center_y, block_info);
         } else {
           this.drawShadow(center_x, center_y);
-          if (block_info.bear) {
-            this.createAnimalRegion(center_x, center_y, "black");
-          } else if (block_info.cougar) {
-            this.createAnimalRegion(center_x, center_y, "red");
-          }
+          this.drawAnimal(block_info);
         }
-        if (block_info.hut) {
-          this.createStructure(center_x, center_y, "hut", block_info.hut_color);
-        } else if (block_info.stone) {
-          this.createStructure(center_x, center_y, "stone", block_info.stone_color);
-        }
+        this.drawStructure(block_info);
         this.map_detail[block_idx_y][block_idx_x].shadow = !this.map_detail[block_idx_y][block_idx_x].shadow;
       } else {
         this.drawHexagon(center_x, center_y, block_info);
         if (block_info.shadow) {
           this.drawShadow(center_x, center_y);
         }
-        if (block_info.hut) {
-          this.createStructure(center_x, center_y, "hut", block_info.hut_color);
-        } else if (block_info.stone) {
-          this.createStructure(center_x, center_y, "stone", block_info.stone_color);
-        }
+        this.drawStructure(block_info);
       }
       if (this.manual_config_mode){
         this.drawDigits();
@@ -700,9 +696,135 @@ export default {
       this.ctx.fill();
       this.ctx.stroke();
     },
+    drawAnimal(block_info) {
+      const x = block_info["block_center_x"];
+      const y = block_info["block_center_y"];
+      if (block_info["bear"]) {
+        this.createAnimalRegion(x, y, "black");
+      } else if (block_info["cougar"]) {
+        this.createAnimalRegion(x, y, "red");
+      }
+    },
+    drawStructure(block_info) {
+      const x = block_info["block_center_x"];
+      const y = block_info["block_center_y"];
+      if (block_info["hut"]) {
+        this.createStructureRegion(x, y, "hut", block_info["hut_color"]);
+      } else if (block_info["stone"]) {
+        this.createStructureRegion(x, y, "stone", block_info["stone_color"]);
+      }
+    },
     generateClueShadow() {
-      console.log("clue data", this.ownClue);
-    }
+      this.regenerateMap();
+
+      // create visited map
+      let visited = [];
+      let block_list = []
+
+      // set visited map, redraw shadow part and add visited part to list
+      for (let i=0;i<this.map_detail.length;i++) {
+        visited[i] = [];
+        for (let j=0;j<this.map_detail[0].length;j++) {
+          visited[i][j] = false;
+          if (this.map_detail[i][j].block === this.ownClue.value1 ||
+              (this.ownClue.value2 !== null && this.map_detail[i][j].block === this.ownClue.value2)) {
+            block_list.push(this.map_detail[i][j]);
+            visited[i][j] = true;
+            this.map_detail[i][j].shadow = false;
+            this.redraw_block(this.map_detail[i][j], "shadow");
+          }
+        }
+      }
+
+      // multiple times expand shadow area due to the distance
+      let times = 0;
+      while(times < this.ownClue.distance) {
+        console.log("expand times: ", times);
+        times += 1;
+        let block_list2 = [];
+        while (block_list.length !== 0) {
+          const first_block = block_list[0];
+          block_list.splice(0, 1);
+
+          console.log("first block", first_block)
+          console.log("block list", block_list)
+
+          const block_i = first_block.block_y_idx;
+          const block_j = first_block.block_x_idx;
+          let direction_list = (block_j % 2 === 0) ? DIRECTION_ODD : DIRECTION_EVEN;
+
+          for (let idx in direction_list) {
+            const direction_i = direction_list[idx][0];
+            const direction_j = direction_list[idx][1];
+            const final_i = block_i + direction_i;
+            const final_j = block_j + direction_j;
+            if ((final_i >= 0) &&
+                (final_i < visited.length) &&
+                (final_j >= 0) &&
+                (final_j < visited[0].length) &&
+                !visited[final_i][final_j]) {
+              visited[final_i][final_j] = true;
+              block_list2.push(this.map_detail[final_i][final_j]);
+              this.map_detail[final_i][final_j].shadow = false;
+              this.redraw_block(this.map_detail[final_i][final_j], "shadow");
+            }
+          }
+
+          // layer by layer expand
+          block_list = block_list2;
+        }
+      }
+    },
+    regenerateMap() {
+      this.generateMap({
+        "index_array": this.randomIndexArray,
+        "flip_array": this.randomBoolArray,
+      })
+    },
+    checkHutExist(x, y) {
+      for (let i in this.hut_info) {
+        if (this.hut_info[i].x === x && this.hut_info[i].y === y) {
+          return i;
+        }
+      }
+      return -1;
+    },
+    addToHut(x, y, color) {
+      this.hut_info.push({
+        x: x,
+        y: y,
+        color: color
+      })
+    },
+    removeFromHut(x, y) {
+      for (let i in this.hut_info) {
+        if (this.hut_info[i].x === x && this.hut_info[i].y === y) {
+          this.hut_info.splice(i, 1);
+        }
+      }
+    },
+    checkStoneExist(x, y) {
+      for (let i in this.stone_info) {
+        if (this.stone_info[i].x === x && this.stone_info[i].y === y) {
+          return i;
+        }
+      }
+      return -1;
+    },
+    addToStone(x, y, color) {
+      this.stone_info.push({
+        x: x,
+        y: y,
+        color: color
+      })
+    },
+    removeFromStone(x, y) {
+      for (let i in this.stone_info) {
+        if (this.stone_info[i].x === x && this.stone_info[i].y === y) {
+          this.stone_info.splice(i, 1);
+        }
+      }
+    },
   },
 }
 </script>

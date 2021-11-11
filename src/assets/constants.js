@@ -8,7 +8,7 @@ export const CLUE_DATA =
         {name: '在 沙漠 或 沼泽', distance: 0, type: 'terrain', inverse: false, value1: 'D', value2: 'S'},
         {name: '在 沙漠 或 山地', distance: 0, type: 'terrain', inverse: false, value1: 'D', value2: 'M'},
         {name: '在 海洋 或 沼泽', distance: 0, type: 'terrain', inverse: false, value1: 'W', value2: 'S'},
-        {name: '在 海洋 或 沼泽', distance: 0, type: 'terrain', inverse: false, value1: 'W', value2: 'M'},
+        {name: '在 海洋 或 山地', distance: 0, type: 'terrain', inverse: false, value1: 'W', value2: 'M'},
         {name: '在 沼泽 或 山地', distance: 0, type: 'terrain', inverse: false, value1: 'S', value2: 'M'},
         {name: '在 森林 的1格距离内', distance: 1, type: 'terrain', inverse: false, value1: 'F', value2: null},
         {name: '在 沙漠 的1格距离内', distance: 1, type: 'terrain', inverse: false, value1: 'D', value2: null},
@@ -199,3 +199,21 @@ export const COUGAR =
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
     ]
+
+export const DIRECTION_EVEN = [
+    [0, -1],
+    [-1, 0],
+    [0, 1],
+    [1, 1],
+    [1, 0],
+    [1, -1]
+]
+
+export const DIRECTION_ODD = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, 1],
+    [1, 0],
+    [0, -1]
+]
