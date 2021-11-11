@@ -39,6 +39,20 @@
                 </el-button>
               </el-col>
             </el-row>
+            <el-row :gutter="12" type="flex" justify="center" align="middle">
+              <el-col :span="4">
+                尺寸调节：
+              </el-col>
+              <el-col :span="20">
+                <el-slider
+                    v-model="r"
+                    :min="10"
+                    :max="50"
+                    @change="handleRchange"
+                    show-stops>
+                </el-slider>
+              </el-col>
+            </el-row>
           </el-card>
           <el-card shadow="never">
             <el-row :gutter="12">
@@ -869,6 +883,13 @@ export default {
         }
       }
     },
+    handleRchange() {
+      let canvas = document.getElementById('canvas')
+      const w = canvas.width;
+      const h = canvas.height;
+      this.ctx.clearRect(0, 0, w, h);
+      this.regenerateMap();
+    }
   },
 }
 </script>
