@@ -328,8 +328,17 @@ export default {
     handleCodeInputChange(input) {
       let complete_code = "N4IglgdgJgpgHgfQIYCcVIJ4gFwG0" + input + "A";
       try {
-        const generation_info = LZ.decompressFromEncodedURIComponent(complete_code);
-        this.generateMap(JSON.parse(generation_info));
+        const json_code = LZ.decompressFromEncodedURIComponent(complete_code);
+        const generation_info = JSON.parse(json_code);
+        const flipArray = generation_info["flip_array"];
+        for (let i in flipArray) {
+          if (!flipArray[i]) {
+            MAP[i].reverse();
+            BEAR[i].reverse();
+            COUGAR[i].reverse();
+          }
+        }
+        this.generateMap(generation_info);
       } catch (e) {
         this.generatedCode = "无法解析神秘代码，请重新输入"
       }
@@ -401,6 +410,13 @@ export default {
         });
         return;
       }
+      console.log("index array before", this.randomIndexArray);
+      console.log("flip array before", this.randomBoolArray);
+
+      let zip_index_flip = {}
+      for (let i in this.randomIndexArray) {
+        zip_index_flip[this.randomIndexArray[i]] = this.randomBoolArray[i];
+      }
 
       let indexArray = []
       for (let i = 0; i < 3; i++) {
@@ -409,6 +425,16 @@ export default {
       }
       // console.log("index array", indexArray);
       this.randomIndexArray = indexArray;
+
+      let boolArray = []
+      for (let idx in this.randomIndexArray) {
+        boolArray.push(zip_index_flip[this.randomIndexArray[idx]]);
+      }
+      this.randomBoolArray = boolArray;
+
+      console.log("index array after", this.randomIndexArray);
+      console.log("flip array after", this.randomBoolArray);
+
       this.regenerateMap();
     },
     initClue() {
