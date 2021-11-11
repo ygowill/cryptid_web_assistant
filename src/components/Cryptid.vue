@@ -76,7 +76,7 @@
                     class="checklist_button"
                     size="mini"
                     :type=clue_state_list[scope.$index][0].type
-                    @click="handleClick(scope.$index, 0)">{{ clue_state_list[scope.$index][0].label }}
+                    @click="handleClueStateChange(scope.$index, 0)">{{ clue_state_list[scope.$index][0].label }}
                 </el-button>
               </template>
             </el-table-column>
@@ -86,7 +86,7 @@
                     class="checklist_button"
                     size="mini"
                     :type=clue_state_list[scope.$index][1].type
-                    @click="handleClick(scope.$index, 1)">{{ clue_state_list[scope.$index][1].label }}
+                    @click="handleClueStateChange(scope.$index, 1)">{{ clue_state_list[scope.$index][1].label }}
                 </el-button>
               </template>
             </el-table-column>
@@ -96,7 +96,7 @@
                     class="checklist_button"
                     size="mini"
                     :type=clue_state_list[scope.$index][2].type
-                    @click="handleClick(scope.$index, 2)">{{ clue_state_list[scope.$index][2].label }}
+                    @click="handleClueStateChange(scope.$index, 2)">{{ clue_state_list[scope.$index][2].label }}
                 </el-button>
               </template>
             </el-table-column>
@@ -106,7 +106,7 @@
                     class="checklist_button"
                     size="mini"
                     :type=clue_state_list[scope.$index][3].type
-                    @click="handleClick(scope.$index, 3)">{{ clue_state_list[scope.$index][3].label }}
+                    @click="handleClueStateChange(scope.$index, 3)">{{ clue_state_list[scope.$index][3].label }}
                 </el-button>
               </template>
             </el-table-column>
@@ -116,7 +116,7 @@
                     class="checklist_button"
                     size="mini"
                     :type=clue_state_list[scope.$index][4].type
-                    @click="handleClick(scope.$index, 4)">{{ clue_state_list[scope.$index][4].label }}
+                    @click="handleClueStateChange(scope.$index, 4)">{{ clue_state_list[scope.$index][4].label }}
                 </el-button>
               </template>
             </el-table-column>
@@ -236,7 +236,8 @@ export default {
           id: 5,
           label: "6"
         },
-      ]
+      ],
+      ownClue: null,
     };
   },
   methods: {
@@ -270,19 +271,19 @@ export default {
       const block_info = this.getNearestBlock(x, y);
       let type = "shadow";
       if (this.mode === 0) {
-        console.log("shadow mode")
+        // console.log("shadow mode")
       }  else if (this.mode === 1) {
         type = "structure";
-        console.log("add hut to map");
+        // console.log("add hut to map");
         this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"];
         this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut_color"] = this.chosenColor;
       } else if (this.mode === 2) {
         type = "structure";
-        console.log("add stone to map");
+        // console.log("add stone to map");
         this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"] = !this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone"];
         this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["stone_color"] = this.chosenColor;
       }
-      console.log("block_info", block_info)
+      // console.log("block_info", block_info)
       this.redraw_block(block_info, type);
     },
     handleCodeInputChange(input) {
@@ -358,7 +359,7 @@ export default {
         this.tile_list2.splice(new_row, 0, element);
       }
 
-      console.log("after drag", this.tile_list1, this.tile_list2)
+      // console.log("after drag", this.tile_list1, this.tile_list2)
       if (this.tile_list1.length !== 3) {
         this.$notify({
           title: '错误',
@@ -373,7 +374,7 @@ export default {
         indexArray.push(this.tile_list1[i].id);
         indexArray.push(this.tile_list2[i].id);
       }
-      console.log("index array", indexArray);
+      // console.log("index array", indexArray);
       this.randomIndexArray = indexArray;
       this.generateMap({
         "index_array": this.randomIndexArray,
@@ -401,7 +402,7 @@ export default {
         }
       }
     },
-    handleClick(index, col) {
+    handleClueStateChange(index, col) {
       if (this.clue_state_list[index][col].label === "Maybe") {
         this.clue_state_list[index][col] = {label: "Inverse", type: "warning"};
       } else if (this.clue_state_list[index][col].label === "Inverse") {
@@ -429,6 +430,22 @@ export default {
         this.clue_state_list[last_maybe_index][col] = {label: "Yes!", type: "success"};
       }
       this.$set(this.clue_state_list, index, this.clue_state_list[index])
+      const own_clue = this.clue_state_list.map((item) => {
+        return item[0];
+      })
+
+      // draw shadow for own clue
+      let clue_id = -1;
+      for (let idx in own_clue) {
+        if (own_clue[idx].label === "Yes!") {
+          clue_id = idx;
+          break;
+        }
+      }
+      this.ownClue = CLUE_DATA[clue_id];
+      if (col === 0) {
+        this.generateClueShadow();
+      }
     },
     drawDigits() {
       let canvas = document.getElementById('canvas');
@@ -447,7 +464,7 @@ export default {
       }
     },
     generateMap(generation_info) {
-      // generate
+      // generate code
       const gen_str = JSON.stringify(generation_info);
       const code = LZ.compressToEncodedURIComponent(gen_str);
       this.generatedCode = code.slice("N4IglgdgJgpgHgfQIYCcVIJ4gFwG0".length, -1)
@@ -506,11 +523,6 @@ export default {
             "block_id": block_id,
             "block_center_x": x,
             "block_center_y": y,
-            // "block_x_idx": !map_info.flip ? map_info["tile_start_x"] * 6 + i : 11 - (map_info["tile_start_x"] * 6 + i),
-            // "block_y_idx": !map_info.flip ? map_info["tile_start_y"] * 3 + j : 8 - (map_info["tile_start_y"] * 3 + j),
-            // "block": !map_info.flip ? map_info["tile"][block_id] : map_info["tile"][17 - block_id],
-            // "bear": !map_info.flip ? map_info["bear"][block_id] === 1 : map_info["bear"][17 - block_id],
-            // "cougar": !map_info.flip ? map_info["cougar"][block_id] === 1 : map_info["cougar"][17 - block_id],
             "block_x_idx": map_info["tile_start_x"] * 6 + i,
             "block_y_idx": map_info["tile_start_y"] * 3 + j,
             "block": map_info["tile"][block_id],
@@ -525,6 +537,14 @@ export default {
             "hut_color": "black",
             "stone": false,
             "stone_color": "black",
+          }
+
+          block_info["block_type"] = ["terrain"]
+          if (block_info["bear"] || block_info["cougar"]) {
+            block_info["block_type"].push("animal")
+          }
+          if (block_info["hut"] || block_info["stone"]) {
+            block_info["block_type"].push("structure")
           }
 
           if (Object.prototype.hasOwnProperty.call(this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]], 'hut') || this.map_detail[block_info["block_y_idx"]][block_info["block_x_idx"]]["hut"] === undefined) {
@@ -637,52 +657,57 @@ export default {
       const center_y = block_info.block_center_y;
       const block_idx_x = block_info.block_x_idx;
       const block_idx_y = block_info.block_y_idx;
-      console.log("redraw block type", type)
+      // console.log("redraw block type", type)
       if (type === "shadow") {
         if (block_info.shadow) {
-          console.log("redraw block info",block_info)
+          // console.log("redraw block info",block_info)
           this.drawHexagon(center_x, center_y, block_info);
         } else {
-          this.createPolygonPath(center_x, center_y, this.r, 6, Math.PI / 6);
-          this.ctx.setLineDash([])
-          this.ctx.lineWidth = 2;
-          this.ctx.strokeStyle = "white"
-          this.ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-          this.ctx.fill();
-          this.ctx.stroke();
+          this.drawShadow(center_x, center_y);
           if (block_info.bear) {
             this.createAnimalRegion(center_x, center_y, "black");
           } else if (block_info.cougar) {
             this.createAnimalRegion(center_x, center_y, "red");
           }
-          if (block_info.hut) {
-            this.createStructure(center_x, center_y, "hut", block_info.hut_color);
-          } else if (block_info.stone) {
-            this.createStructure(center_x, center_y, "stone", block_info.stone_color);
-          }
+        }
+        if (block_info.hut) {
+          this.createStructure(center_x, center_y, "hut", block_info.hut_color);
+        } else if (block_info.stone) {
+          this.createStructure(center_x, center_y, "stone", block_info.stone_color);
         }
         this.map_detail[block_idx_y][block_idx_x].shadow = !this.map_detail[block_idx_y][block_idx_x].shadow;
       } else {
         this.drawHexagon(center_x, center_y, block_info);
+        if (block_info.shadow) {
+          this.drawShadow(center_x, center_y);
+        }
         if (block_info.hut) {
           this.createStructure(center_x, center_y, "hut", block_info.hut_color);
         } else if (block_info.stone) {
           this.createStructure(center_x, center_y, "stone", block_info.stone_color);
         }
       }
-
-
       if (this.manual_config_mode){
         this.drawDigits();
       }
-
     },
+    drawShadow(center_x, center_y) {
+      this.createPolygonPath(center_x, center_y, this.r, 6, Math.PI / 6);
+      this.ctx.setLineDash([])
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = "white"
+      this.ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+      this.ctx.fill();
+      this.ctx.stroke();
+    },
+    generateClueShadow() {
+      console.log("clue data", this.ownClue);
+    }
   },
 }
 </script>
 
 <style scoped>
-
 
 .colorOptionsContent /deep/ .el-select-dropdown*{
   height:50px;
