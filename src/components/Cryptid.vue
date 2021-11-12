@@ -48,7 +48,7 @@
                     v-model="r"
                     :min="10"
                     :max="50"
-                    @change="handleRchange"
+                    @change="handleRChange"
                     show-stops>
                 </el-slider>
               </el-col>
@@ -161,7 +161,7 @@
 </template>
 
 <script>
-import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP, DIRECTION_EVEN, DIRECTION_ODD, COLOR_SHORT_MAP} from "@/assets/constants"
+import {BEAR, CLUE_DATA, COLOR_MAP, COUGAR, MAP, DIRECTION_EVEN, DIRECTION_ODD, COLOR_SHORT_MAP, INIT_BOARD_STATE} from "@/assets/constants"
 import draggable from 'vuedraggable'
 
 const LZ = require("lz-string")
@@ -188,8 +188,9 @@ export default {
         this.x = x;
         this.y = y;
       },
-      randomIndexArray: [0, 1, 2, 3, 4, 5],
-      randomBoolArray: [false, false, false, false, false, false],
+      board_tile_state: [],
+      // randomIndexArray: [0, 1, 2, 3, 4, 5],
+      // randomBoolArray: [false, false, false, false, false, false],
       clueData: [],
       mode: 0,
       clue_state_list: [],
@@ -252,7 +253,10 @@ export default {
       ownClue: null,
       hut_info: [],
       stone_info: [],
-      showPosition: false
+      showPosition: false,
+      map: [],
+      bear: [],
+      cougar: []
     };
   },
   methods: {
@@ -267,9 +271,13 @@ export default {
         }
       }
 
-      this.randomIndexArray = this.generateRandomIndexArray(6);
-      this.randomBoolArray = this.generateRandomBoolArray(6);
-      this.regenerateMap();
+      this.map = JSON.parse(JSON.stringify(MAP))
+      this.bear = JSON.parse(JSON.stringify(BEAR))
+      this.cougar = JSON.parse(JSON.stringify(COUGAR))
+      this.board_tile_state = JSON.parse(JSON.stringify(INIT_BOARD_STATE));
+      this.board_tile_state.shuffle();
+      this.randomFlip();
+      this.generateMap();
     },
     handleMapClick(ev) {
       let x, y;
@@ -326,20 +334,31 @@ export default {
       this.redraw_block(block_info, type);
     },
     handleCodeInputChange(input) {
-      let complete_code = "N4IglgdgJgpgHgfQIYCcVIJ4gFwG0" + input + "A";
+      // let complete_code = "NobwRAlgdgJgpgDzALg" + input + "A";
+      let complete_code = "N4IglgdgJgpgHiAXAbQ" + input + "AvkA";
       try {
         const json_code = LZ.decompressFromEncodedURIComponent(complete_code);
         const generation_info = JSON.parse(json_code);
-        const flipArray = generation_info["flip_array"];
-        for (let i in flipArray) {
-          if (!flipArray[i]) {
-            MAP[i].reverse();
-            BEAR[i].reverse();
-            COUGAR[i].reverse();
+        // console.log("board tile info", this.board_tile_state);
+        // console.log("code input info", generation_info);
+        for (let i=0;i<generation_info["index"].length;i++) {
+          this.board_tile_state[i].flip = (generation_info["flip"][i]===1);
+          this.board_tile_state[i].index = generation_info["index"][i];
+        }
+        // console.log("map before", this.map);
+        for (let i=0;i<generation_info["flip"].length;i++) {
+          if (generation_info["flip"][i]===1) {
+            const idx = generation_info["index"][i];
+            // console.log("reverse idx:", idx);
+            this.map[idx].reverse();
+            this.bear[idx].reverse();
+            this.cougar[idx].reverse();
           }
         }
-        this.generateMap(generation_info);
+        // console.log("map after", this.map);
+        this.generateMap();
       } catch (e) {
+        // console.log("error", e);
         this.generatedCode = "无法解析神秘代码，请重新输入"
       }
     },
@@ -352,14 +371,14 @@ export default {
         this.manual_config_tip = "展开手动布局";
       }
       if (this.manual_config_mode) {
-        const generation_info = {
-          "index_array": [0, 1, 2, 3, 4, 5, 6],
-          "flip_array": [false, false, false, false, false, false]
-        }
-        this.generateMap(generation_info);
-      } else {
-        this.regenerateMap();
+        // console.log("manual mode init");
+        this.map = JSON.parse(JSON.stringify(MAP))
+        this.bear = JSON.parse(JSON.stringify(BEAR))
+        this.cougar = JSON.parse(JSON.stringify(COUGAR))
+        this.board_tile_state = JSON.parse(JSON.stringify(INIT_BOARD_STATE))
       }
+      // console.log("manual state", this.board_tile_state);
+      this.generateMap();
     },
     handleDragClick(e) {
       // console.log("tile list 1", this.tile_list1)
@@ -373,16 +392,24 @@ export default {
       }
 
       const tile_id = parseInt(e.path[0].childNodes[0].data) - 1;
-      this.randomBoolArray[tile_id] = !this.randomBoolArray[tile_id];
+      let tile_loc = 0;
+      for (let i=0;i<this.board_tile_state.length;i++) {
+        if (this.board_tile_state[i].index === tile_id) {
+          tile_loc = i;
+          break;
+        }
+      }
+      this.board_tile_state[tile_loc].flip = !this.board_tile_state[tile_loc].flip;
+      // console.log("rotate board state")
       this.$notify({
         title: '成功',
         message: '已成功旋转板块' + (tile_id + 1).toString(),
         duration: 1000
       });
-      MAP[tile_id].reverse();
-      BEAR[tile_id].reverse();
-      COUGAR[tile_id].reverse();
-      this.regenerateMap();
+      this.map[tile_id].reverse();
+      this.bear[tile_id].reverse();
+      this.cougar[tile_id].reverse();
+      this.generateMap();
     },
     handleDragEnd(e) {
       let old_row = e.oldIndex;
@@ -410,32 +437,30 @@ export default {
         });
         return;
       }
-      console.log("index array before", this.randomIndexArray);
-      console.log("flip array before", this.randomBoolArray);
-
-      let zip_index_flip = {}
-      for (let i in this.randomIndexArray) {
-        zip_index_flip[this.randomIndexArray[i]] = this.randomBoolArray[i];
+      // console.log("index array before", this.randomIndexArray);
+      // console.log("flip array before", this.randomBoolArray);
+      function get_tile_loc(id, state_list) {
+         for (let i in state_list){
+           if (id === state_list[i].index) {
+             return i;
+           }
+         }
+         return -1;
       }
 
-      let indexArray = []
+      // console.log(this.tile_list1, this.tile_list2)
+      let state_array = []
       for (let i = 0; i < 3; i++) {
-        indexArray.push(this.tile_list1[i].id);
-        indexArray.push(this.tile_list2[i].id);
+        state_array.push(this.board_tile_state[get_tile_loc(this.tile_list1[i].id, this.board_tile_state)]);
+        state_array.push(this.board_tile_state[get_tile_loc(this.tile_list2[i].id, this.board_tile_state)]);
       }
-      // console.log("index array", indexArray);
-      this.randomIndexArray = indexArray;
+      // console.log("index array", state_array);
+      this.board_tile_state = state_array;
 
-      let boolArray = []
-      for (let idx in this.randomIndexArray) {
-        boolArray.push(zip_index_flip[this.randomIndexArray[idx]]);
-      }
-      this.randomBoolArray = boolArray;
+      // console.log("index array after", this.randomIndexArray);
+      // console.log("flip array after", this.randomBoolArray);
 
-      console.log("index array after", this.randomIndexArray);
-      console.log("flip array after", this.randomBoolArray);
-
-      this.regenerateMap();
+      this.generateMap();
     },
     initClue() {
       this.clueData = [];
@@ -513,7 +538,8 @@ export default {
           this.ctx.font = "60px Arial";
           this.ctx.textAlign = "center";
           this.ctx.fillStyle = "black";
-          this.ctx.fillText((this.randomIndexArray[current_number] + 1).toString(), number_start_x, number_start_y);
+          this.ctx.fillText((this.board_tile_state[current_number].index + 1).toString(), number_start_x, number_start_y);
+          // this.ctx.fillText((this.randomIndexArray[current_number] + 1).toString(), number_start_x, number_start_y);
           number_start_x += canvas.width / 2;
         }
         number_start_y += canvas.height / 3
@@ -526,28 +552,37 @@ export default {
       const text = block_info["block_x_idx"].toString() + "," + block_info["block_y_idx"];
       this.ctx.fillText(text, block_info["block_center_x"], block_info["block_center_y"] + this.r/4);
     },
-    generateMap(generation_info) {
-      // generate code
+    generateMap() {
+      // generate code and compress
+      let generation_info = {
+        "index": [],
+        "flip": [],
+      }
+
+      // console.log(this.board_tile_state)
+      for (let i=0;i<6;i++) {
+        generation_info["index"].push(this.board_tile_state[i].index)
+        generation_info["flip"].push(this.board_tile_state[i].flip ? 1 : 0)
+      }
+
       const gen_str = JSON.stringify(generation_info);
       const code = LZ.compressToEncodedURIComponent(gen_str);
-      this.generatedCode = code.slice("N4IglgdgJgpgHgfQIYCcVIJ4gFwG0".length, -1)
-
-      this.randomIndexArray = generation_info["index_array"];
-      this.randomBoolArray = generation_info["flip_array"];
+      // this.generatedCode = code;
+      this.generatedCode = code.slice("N4IglgdgJgpgHiAXAbQ".length, -1)
 
       let start_y = this.r * Math.sin(this.a);
       for (let i = 0; i < 3; i++) {
         let start_x = this.r;
         for (let j = 0; j < 2; j++) {
-          const tile_id = this.randomIndexArray[i * 2 + j];
+          const tile_id = this.board_tile_state[i * 2 + j].index;
           const map_info = {
             "tile_id": tile_id,
             "tile_start_x": j,
             "tile_start_y": i,
-            "tile": MAP[tile_id],
-            "bear": BEAR[tile_id],
-            "cougar": COUGAR[tile_id],
-            "flip": this.randomBoolArray[i * 2 + j],
+            "tile": this.map[tile_id],
+            "bear": this.bear[tile_id],
+            "cougar": this.cougar[tile_id],
+            "flip": this.board_tile_state[i * 2 + j].flip,
           }
           // console.log("map:", tile_id);
           // console.log(MAP[tile_id]);
@@ -559,21 +594,6 @@ export default {
       if (this.manual_config_mode) {
         this.drawDigits();
       }
-    },
-    generateRandomBoolArray(length) {
-      const array = [];
-      for (let i = 0; i < length; i++) {
-        array.push(Math.random() < 0.5);
-      }
-      return array;
-    },
-    generateRandomIndexArray(length) {
-      const arr = Array.from(new Array(length).keys());
-      for (let i = 1; i < arr.length; i++) {
-        const random = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[random]] = [arr[random], arr[i]];
-      }
-      return arr;
     },
     drawTile(start_x, start_y, map_info) {
       let x = start_x;
@@ -770,7 +790,7 @@ export default {
       }
     },
     generateClueShadow() {
-      this.regenerateMap();
+      this.generateMap();
 
       // create visited map
       let visited = [];
@@ -859,12 +879,6 @@ export default {
         block_list = block_list2;
       }
     },
-    regenerateMap() {
-      this.generateMap({
-        "index_array": this.randomIndexArray,
-        "flip_array": this.randomBoolArray,
-      })
-    },
     checkHutExist(x, y) {
       for (let i in this.hut_info) {
         if (this.hut_info[i].x === x && this.hut_info[i].y === y) {
@@ -909,12 +923,17 @@ export default {
         }
       }
     },
-    handleRchange() {
+    handleRChange() {
       let canvas = document.getElementById('canvas')
       const w = canvas.width;
       const h = canvas.height;
       this.ctx.clearRect(0, 0, w, h);
-      this.regenerateMap();
+      this.generateMap();
+    },
+    randomFlip() {
+      for(let i in this.board_tile_state) {
+        this.board_tile_state[i].flip = (Math.random() < 0.5);
+      }
     }
   },
 }

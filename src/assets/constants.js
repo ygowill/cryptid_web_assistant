@@ -218,6 +218,33 @@ export const DIRECTION_ODD = [
     [0, -1]
 ]
 
+export const INIT_BOARD_STATE = [
+    {
+        index: 0,
+        flip: false
+    },
+    {
+        index: 1,
+        flip: false
+    },
+    {
+        index: 2,
+        flip: false
+    },
+    {
+        index: 3,
+        flip: false
+    },
+    {
+        index: 4,
+        flip: false
+    },
+    {
+        index: 5,
+        flip: false
+    }
+]
+
 export const COLOR_SHORT_MAP = {
     "#FFFFFF": "W",
     "#000012": "D",
