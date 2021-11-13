@@ -2,12 +2,14 @@
   <div>
     <h2>诡影寻踪 网页助手 v1.0</h2>
     <div class="main_content">
-      <el-card shadow="never">
+      <el-card class="col1" shadow="never">
         <el-card class="canvas_card" shadow="never">
-          <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
-                  @click="handleMapClick">
-            你的浏览器居然不支持Canvas？！赶快换一个吧！！
-          </canvas>
+          <el-row type="flex" align="middle">
+            <canvas height="520" id="canvas" style="display: block;" width="570"
+                    @click="handleMapClick">
+              你的浏览器居然不支持Canvas？！赶快换一个吧！！
+            </canvas>
+          </el-row>
         </el-card>
         <el-card shadow="never">
           <el-row :gutter="12" type="flex" justify="center" align="middle">
@@ -27,7 +29,7 @@
         <el-card shadow="never">
           <el-row :gutter="12" type="flex" justify="center" align="middle">
             <el-col :span="12">
-              <el-radio-group v-model="mode">
+              <el-radio-group v-model="mode" size="small" type="vertical">
                 <el-radio :label="0">添加/移除遮蔽</el-radio>
                 <el-radio :label="1">添加/移除小屋</el-radio>
                 <el-radio :label="2">添加/移除石柱</el-radio>
@@ -64,7 +66,7 @@
         </el-card>
 
       </el-card>
-      <el-card shadow="never" v-if="!this.manual_config_mode">
+      <el-card class="clue_table" shadow="never" v-if="!this.manual_config_mode">
         <h4>
           线索对照表
         </h4>
@@ -76,7 +78,7 @@
           <el-table-column
               prop="clue"
               label="线索"
-              width="120"
+              width="240"
               fixed
           >
           </el-table-column>
@@ -258,11 +260,19 @@ export default {
       console.log("height:", h, " width:", w);
       if (w>=1100) {
         canvas.height = 520;
-        canvas.width = 570;
+        canvas.width = w-800;
+        let col1_card = document.getElementsByClassName("col1")[0];
+        col1_card.style.width = (1.15*canvas.width).toString() + "px";
       } else {
         canvas.height = 0.8*w;
         canvas.width = 0.8*w;
         this.r = canvas.height / 20;
+        let clue_table_card = document.getElementsByClassName("clue_table")[0];
+        let col1_card = document.getElementsByClassName("col1")[0];
+        let canvas_card = document.getElementsByClassName("canvas_card")[0];
+        console.log(clue_table_card, col1_card)
+        col1_card.style.width = (clue_table_card.style.width).toString() + "px";
+        canvas_card.style.height = (1.15*canvas.height).toString() + "px";
       }
 
       this.ctx = canvas.getContext("2d")
