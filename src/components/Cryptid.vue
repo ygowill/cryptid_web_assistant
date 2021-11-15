@@ -1,162 +1,157 @@
 <template>
   <div>
     <h2>诡影寻踪 网页助手 v1.0</h2>
-    <el-row type="flex">
-      <el-col :span="12">
+    <div class="main_content">
+      <el-card shadow="never">
+        <el-card class="canvas_card" shadow="never">
+          <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
+                  @click="handleMapClick">
+            你的浏览器居然不支持Canvas？！赶快换一个吧！！
+          </canvas>
+        </el-card>
         <el-card shadow="never">
-          <el-card shadow="never">
-            <canvas height="520" id="canvas" style="display: block; margin: 50px auto;" width="570"
-                    @click="handleMapClick">
-              你的浏览器居然不支持Canvas？！赶快换一个吧！！
-            </canvas>
-          </el-card>
-          <el-card shadow="never">
-            <el-row :gutter="12" type="flex" justify="center" align="middle">
-              <el-col :span="4">
-                手动修改：
-              </el-col>
-              <el-col :span="12">
-                <el-radio-group v-model="mode">
-                  <el-radio :label="0">添加/移除遮蔽</el-radio>
-                  <el-radio :label="1">添加/移除小屋</el-radio>
-                  <el-radio :label="2">添加/移除石柱</el-radio>
-                </el-radio-group>
-              </el-col>
-              <el-col :span="4">
-                <el-select v-model="chosenColor" placeholder="请选择" popper-class="colorOptionsContent">
-                  <el-option
-                      v-for="item in colorOption"
-                      :key="item.value"
-                      :label="item.label"
-                      :value="item.value"
-                      :style="'background:'+ item.value+'; color: '+ item.font_color +'; width:100%; height:100%;'">
-                  </el-option>
-                </el-select>
-              </el-col>
-              <el-col :span="4">
-                <el-button @click="handleManualConfig">
-                  {{ this.manual_config_tip }}
-                </el-button>
-              </el-col>
-            </el-row>
-            <el-row :gutter="12" type="flex" justify="center" align="middle">
-              <el-col :span="4">
-                尺寸调节：
-              </el-col>
-              <el-col :span="20">
-                <el-slider
-                    v-model="r"
-                    :min="10"
-                    :max="50"
-                    @change="handleRChange"
-                    show-stops>
-                </el-slider>
-              </el-col>
-            </el-row>
-          </el-card>
-          <el-card shadow="never">
-            <el-row :gutter="12">
-              <el-col :span="4">
-                神秘代码：
-              </el-col>
-              <el-col :span="20">
-                <el-input style="alignment: left" v-model="generatedCode" type="text" size="small" placeholder="请输入内容"
-                          @input="handleCodeInputChange"></el-input>
-              </el-col>
-            </el-row>
-          </el-card>
-
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card shadow="never" v-if="!this.manual_config_mode">
-          <h4>
-            线索对照表
-          </h4>
-          <el-table
-              :data="clueData"
-              style="width: 100%"
-              :row-style="{height: '0'}"
-              :cell-style="{padding: '0'}">
-            <el-table-column
-                prop="clue"
-                label="线索"
-                width="240"
-            >
-            </el-table-column>
-            <el-table-column label="yourself">
-              <template slot-scope="scope">
-                <el-button
-                    class="checklist_button"
-                    size="mini"
-                    :type=clue_state_list[scope.$index][0].type
-                    @click="handleClueStateChange(scope.$index, 0)">{{ clue_state_list[scope.$index][0].label }}
-                </el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="player2">
-              <template slot-scope="scope">
-                <el-button
-                    class="checklist_button"
-                    size="mini"
-                    :type=clue_state_list[scope.$index][1].type
-                    @click="handleClueStateChange(scope.$index, 1)">{{ clue_state_list[scope.$index][1].label }}
-                </el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="player3">
-              <template slot-scope="scope">
-                <el-button
-                    class="checklist_button"
-                    size="mini"
-                    :type=clue_state_list[scope.$index][2].type
-                    @click="handleClueStateChange(scope.$index, 2)">{{ clue_state_list[scope.$index][2].label }}
-                </el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="player4">
-              <template slot-scope="scope">
-                <el-button
-                    class="checklist_button"
-                    size="mini"
-                    :type=clue_state_list[scope.$index][3].type
-                    @click="handleClueStateChange(scope.$index, 3)">{{ clue_state_list[scope.$index][3].label }}
-                </el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="player5">
-              <template slot-scope="scope">
-                <el-button
-                    class="checklist_button"
-                    size="mini"
-                    :type=clue_state_list[scope.$index][4].type
-                    @click="handleClueStateChange(scope.$index, 4)">{{ clue_state_list[scope.$index][4].label }}
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-        <el-card shadow="never" v-if="this.manual_config_mode">
-          <el-row>
-            <h4>
-              Tips:拖动以调整排列，点击以旋转板块
-            </h4>
+          <el-row :gutter="12" type="flex" justify="center" align="middle">
+            <el-col :span="8">
+              尺寸调节：
+            </el-col>
+            <el-col :span="16">
+              <el-slider
+                  v-model="r"
+                  :min="10"
+                  :max="50"
+                  @change="handleRChange">
+              </el-slider>
+            </el-col>
           </el-row>
-          <el-col :span="12" class="draglist1">
-            <draggable @end="handleDragEnd" group="map_tile">
-              <el-card style="margin: 20px;font-size: 60px" shadow="never" v-for='i in tile_list1' :key='i.id'
-                       class='dragItem'><i class="el-icon-refresh" @click="handleDragClick">{{ i.label }}</i></el-card>
-            </draggable>
-          </el-col>
-          <el-col :span="12" class="draglist2">
-            <draggable @end="handleDragEnd" group="map_tile">
-              <el-card style="margin: 20px;font-size: 60px" shadow="never" v-for='i in tile_list2' :key='i.id'
-                       class='dragItem'><i class="el-icon-refresh" @click="handleDragClick">{{ i.label }}</i></el-card>
-            </draggable>
-          </el-col>
         </el-card>
-      </el-col>
-    </el-row>
+        <el-card shadow="never">
+          <el-row :gutter="12" type="flex" justify="center" align="middle">
+            <el-col :span="12">
+              <el-radio-group v-model="mode">
+                <el-radio :label="0">添加/移除遮蔽</el-radio>
+                <el-radio :label="1">添加/移除小屋</el-radio>
+                <el-radio :label="2">添加/移除石柱</el-radio>
+              </el-radio-group>
+            </el-col>
+            <el-col :span="4">
+              <el-select v-model="chosenColor" placeholder="请选择" popper-class="colorOptionsContent">
+                <el-option
+                    v-for="item in colorOption"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                    :style="'background:'+ item.value+'; color: '+ item.font_color +'; width:100%; height:100%;'">
+                </el-option>
+              </el-select>
+            </el-col>
+            <el-col :span="8">
+              <el-button @click="handleManualConfig">
+                {{ this.manual_config_tip }}
+              </el-button>
+            </el-col>
+          </el-row>
+        </el-card>
+        <el-card shadow="never">
+          <el-row :gutter="12">
+            <el-col :span="8">
+              神秘代码：
+            </el-col>
+            <el-col :span="16">
+              <el-input style="alignment: left" v-model="generatedCode" type="text" size="small" placeholder="请输入内容"
+                        @input="handleCodeInputChange"></el-input>
+            </el-col>
+          </el-row>
+        </el-card>
+
+      </el-card>
+      <el-card shadow="never" v-if="!this.manual_config_mode">
+        <h4>
+          线索对照表
+        </h4>
+        <el-table
+            :data="clueData"
+            style="width: 100%"
+            :row-style="{height: '0'}"
+            :cell-style="{padding: '0'}">
+          <el-table-column
+              prop="clue"
+              label="线索"
+              width="120"
+              fixed
+          >
+          </el-table-column>
+          <el-table-column label="yourself">
+            <template slot-scope="scope">
+              <el-button
+                  class="checklist_button"
+                  size="mini"
+                  :type=clue_state_list[scope.$index][0].type
+                  @click="handleClueStateChange(scope.$index, 0)">{{ clue_state_list[scope.$index][0].label }}
+              </el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="player2">
+            <template slot-scope="scope">
+              <el-button
+                  class="checklist_button"
+                  size="mini"
+                  :type=clue_state_list[scope.$index][1].type
+                  @click="handleClueStateChange(scope.$index, 1)">{{ clue_state_list[scope.$index][1].label }}
+              </el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="player3">
+            <template slot-scope="scope">
+              <el-button
+                  class="checklist_button"
+                  size="mini"
+                  :type=clue_state_list[scope.$index][2].type
+                  @click="handleClueStateChange(scope.$index, 2)">{{ clue_state_list[scope.$index][2].label }}
+              </el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="player4">
+            <template slot-scope="scope">
+              <el-button
+                  class="checklist_button"
+                  size="mini"
+                  :type=clue_state_list[scope.$index][3].type
+                  @click="handleClueStateChange(scope.$index, 3)">{{ clue_state_list[scope.$index][3].label }}
+              </el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="player5">
+            <template slot-scope="scope">
+              <el-button
+                  class="checklist_button"
+                  size="mini"
+                  :type=clue_state_list[scope.$index][4].type
+                  @click="handleClueStateChange(scope.$index, 4)">{{ clue_state_list[scope.$index][4].label }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+      <el-card shadow="never" v-if="this.manual_config_mode">
+        <el-row>
+          <h4>
+            Tips:拖动以调整排列，点击以旋转板块
+          </h4>
+        </el-row>
+        <el-col :span="12" class="draglist1">
+          <draggable @end="handleDragEnd" group="map_tile">
+            <el-card style="margin: 20px;font-size: 60px" shadow="never" v-for='i in tile_list1' :key='i.id'
+                     class='dragItem'><i class="el-icon-refresh" @click="handleDragClick">{{ i.label }}</i></el-card>
+          </draggable>
+        </el-col>
+        <el-col :span="12" class="draglist2">
+          <draggable @end="handleDragEnd" group="map_tile">
+            <el-card style="margin: 20px;font-size: 60px" shadow="never" v-for='i in tile_list2' :key='i.id'
+                     class='dragItem'><i class="el-icon-refresh" @click="handleDragClick">{{ i.label }}</i></el-card>
+          </draggable>
+        </el-col>
+      </el-card>
+    </div>
   </div>
 </template>
 
@@ -262,6 +257,18 @@ export default {
   methods: {
     initCanvas() {
       let canvas = document.getElementById('canvas')
+      const w=document.documentElement.clientWidth;
+      const h=document.documentElement.clientHeight;
+      console.log("height:", h, " width:", w);
+      if (w>=1100) {
+        canvas.height = 520;
+        canvas.width = 570;
+      } else {
+        canvas.height = 0.8*w;
+        canvas.width = 0.8*w;
+        this.r = canvas.height / 20;
+      }
+
       this.ctx = canvas.getContext("2d")
 
       for (let i = 0; i < this.map_height; i++) {
@@ -940,6 +947,15 @@ export default {
 </script>
 
 <style scoped>
+
+.main_content {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.canvas_card.el-card__body {
+  padding: 0;
+}
 
 .colorOptionsContent /deep/ .el-select-dropdown*{
   height:50px;
