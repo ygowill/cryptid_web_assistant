@@ -71,8 +71,8 @@
         <el-table
             :data="clueData"
             style="width: 100%"
-            :row-style="{height: '0'}"
-            :cell-style="{padding: '0'}">
+            ref="clue_table"
+            :row-style="{height: '0'}">
           <el-table-column
               prop="clue"
               label="线索"
@@ -84,7 +84,7 @@
             <template slot-scope="scope">
               <el-button
                   class="checklist_button"
-                  size="mini"
+                  size="small"
                   :type=clue_state_list[scope.$index][0].type
                   @click="handleClueStateChange(scope.$index, 0)">{{ clue_state_list[scope.$index][0].label }}
               </el-button>
@@ -94,7 +94,7 @@
             <template slot-scope="scope">
               <el-button
                   class="checklist_button"
-                  size="mini"
+                  size="small"
                   :type=clue_state_list[scope.$index][1].type
                   @click="handleClueStateChange(scope.$index, 1)">{{ clue_state_list[scope.$index][1].label }}
               </el-button>
@@ -104,7 +104,7 @@
             <template slot-scope="scope">
               <el-button
                   class="checklist_button"
-                  size="mini"
+                  size="small"
                   :type=clue_state_list[scope.$index][2].type
                   @click="handleClueStateChange(scope.$index, 2)">{{ clue_state_list[scope.$index][2].label }}
               </el-button>
@@ -114,7 +114,7 @@
             <template slot-scope="scope">
               <el-button
                   class="checklist_button"
-                  size="mini"
+                  size="small"
                   :type=clue_state_list[scope.$index][3].type
                   @click="handleClueStateChange(scope.$index, 3)">{{ clue_state_list[scope.$index][3].label }}
               </el-button>
@@ -124,7 +124,7 @@
             <template slot-scope="scope">
               <el-button
                   class="checklist_button"
-                  size="mini"
+                  size="small"
                   :type=clue_state_list[scope.$index][4].type
                   @click="handleClueStateChange(scope.$index, 4)">{{ clue_state_list[scope.$index][4].label }}
               </el-button>
@@ -165,6 +165,11 @@ export default {
   name: "Cryptid",
   components: {
     draggable,
+  },
+  watch: {
+    clueData() {
+      this.doLayout();
+    }
   },
   mounted() {
     this.initCanvas();
@@ -950,6 +955,12 @@ export default {
       for(let i in this.board_tile_state) {
         this.board_tile_state[i].flip = (Math.random() < 0.5);
       }
+    },
+    doLayout() {
+      let that = this;
+      this.$nextTick(() => {
+        that.$refs.clue_table.doLayout();
+      })
     }
   },
 }
@@ -972,7 +983,6 @@ export default {
 }
 
 .checklist_button {
-  width: 60%;
   height: 50%;
   display: flex;
   align-items: center;
