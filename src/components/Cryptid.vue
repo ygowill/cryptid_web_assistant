@@ -503,6 +503,7 @@ export default {
           }
         }
       }
+      this.doLayout();
     },
     handleClueStateChange(index, col) {
       if (this.clue_state_list[index][col].label === "Maybe") {
