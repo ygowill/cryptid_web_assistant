@@ -1,15 +1,13 @@
 <template>
-  <div>
+  <div class="main">
     <h2>诡影寻踪 网页助手 v1.0</h2>
     <div class="main_content">
       <el-card class="col1" shadow="never">
         <el-card class="canvas_card" shadow="never">
-          <el-row type="flex" align="middle">
             <canvas height="520" id="canvas" style="display: block;" width="570"
                     @click="handleMapClick">
               你的浏览器居然不支持Canvas？！赶快换一个吧！！
             </canvas>
-          </el-row>
         </el-card>
         <el-card shadow="never">
           <el-row :gutter="12" type="flex" justify="center" align="middle">
@@ -134,7 +132,7 @@
           </el-table-column>
         </el-table>
       </el-card>
-      <el-card shadow="never" v-if="this.manual_config_mode">
+      <el-card class="tile_arrangement" shadow="never" v-if="this.manual_config_mode">
         <el-row>
           <h4>
             Tips:拖动以调整排列，点击以旋转板块
@@ -262,11 +260,12 @@ export default {
       const w=document.documentElement.clientWidth;
       const h=document.documentElement.clientHeight;
       console.log("height:", h, " width:", w);
-      if (w>=1100) {
+      if (w>=1000) {
         canvas.height = 520;
-        canvas.width = w-800;
+        canvas.width = 580;
         let col1_card = document.getElementsByClassName("col1")[0];
-        col1_card.style.width = (1.15*canvas.width).toString() + "px";
+        col1_card.style.width = (1.15*canvas.height).toString() + "px";
+        this.r = canvas.height / 20;
       } else {
         canvas.height = 0.8*w;
         canvas.width = 0.8*w;
@@ -961,6 +960,7 @@ export default {
 .main_content {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center
 }
 
 .canvas_card.el-card__body {
